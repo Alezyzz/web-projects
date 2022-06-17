@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment-5</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- bootstrap for easier grid format-->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <!-- development version, includes helpful console warnings -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"></script>
+
+</head>
+<body class="py-5">
+    <h1 class="page-title">Rocket League Memory Game</h1>
+<!--
+    <div class="overlay-text">
+        <div class="restartbtn"><button class="btn btn-info" @click="reset" :disabled="!start">Press here to Start</button></div>
+    </div>
+    <div id="victory-text" class="overlay-text">
+        Victory
+        <span class="overlay-score-screen">Final score:</span>
+        <span class="overlay-text-small">Click to Restart</span> 
+    </div> -->
+    <div id="app">
+    <div class="row">
+        <div class="col-md-6 col-lg-6 col-xl-5 mx-auto">
+            <div class="d-flex flex-row justify-content-center py-3">
+                <div class="p1">
+                    <span class="btn btn-info">Player 1 <br> Turns: <span class="badge" :class="finish? 'badge-success' : 'badge-light'">{{turns}}</span><br>Matches: <span class="badge" :class="finish? 'badge-success' : 'badge-light'">{{matches}} </span>
+                </div>
+                <!--<div class="p2">
+                    <span class="btn btn-info">Player 2 <br> Turns: <span class="badge" :class="finish? 'badge-success' : 'badge-light'">{{turns2}}</span><br>Matches: <span class="badge" :class="finish? 'badge-success' : 'badge-light'">{{matches2}} </span>
+                </div>-->
+                <div class="totalTime p-3"><span class="btn btn-info">Total Time : <span class="badge" :class="finish? 'badge-success' : 'badge-light'">{{min}} : {{sec}}</span></span></div>
+                <div class="restartbtn"><button class="btn btn-info" @click="reset" :disabled="!start">Restart</button></div>
+            </div>
+             <div class="row justify-content-md-center">
+                    <div v-for="card in memorygame" class="col-auto mb-3 flip-container" :class="{'flipped': card.isFlipped, 'matched' : card.isMatched}" @click="flipCard(card)">
+                    <div class="card">
+                        <div class="front"><img width="100%" height="160" src="images/rl-logo.png" ></div>
+                        <div class="back"><img width="100%" height="160" :src="'images/'+card.img"></div>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+<!-- VUE -->
+<script>
+
+// Cards from images folder
+let app = new Vue({
+    el: '#app',
+    data:{
+        cards: [
+            {
+                name: 'Dingo',
+                img: 'dingo.jpg',
+            },
+            {
+                name: 'Dominus',
+                img: 'dominus.jpg',
+            },
+            {
+                name: 'Merc',
+                img: 'merc.jpg',
+            },
+            {
+                name: 'Octane',
+                img: 'octane.jpg',
+            },
+            {
+                name: 'Scarab',
+                img: 'scarab.jpg',
+            },
+            {
+                name: 'Skyline',
+                img: 'skyline.jpg',
+            },
+        ],
+        memorygame: [],
+        flippedCards: [],
+        finish: false,
+        start: false,
+        turns: 0,
+        matches: 0,
+        totalTime: {
+            minutes: 0,
+            seconds: 0,
+        }
+    },
+// shuffle, reset, card flip, timer etc etc code down below
+    created(){
+        this.reset();
+    },
+
+    methods:{
+        reset(){
+                clearInterval(this.interval);
+
+                this.cards.forEach((card) => {
+                    Vue.set(card, 'isFlipped',false);
+                    Vue.set(card, 'isMatched',false);
+                });
+
+                setTimeout(() => {  
+                    this.memorygame = [];
+                    this.memorygame = _.shuffle(this.memorygame.concat(_.cloneDeep(this.cards), _.cloneDeep(this.cards)));
+                    this.totalTime.minutes = 0;
+                    this.totalTime.seconds = 0;
+                    this.start = false;
+                    this.finish = false;
+                    this.turns = 0;
+                    this.matches= 0;
+                    this.turns2 = 0;
+                    this.flippedCards = [];
+                       
+                    }, 600);
+                
+        },
+
+        flipCard(card){
+
+            if(card.isMatched || card.isFlipped || this.flippedCards.length === 2)
+                    return;
+
+            
+            if(!this.start){
+                this._startGame();
+            }
+
+            card.isFlipped = true;
+
+            if(this.flippedCards.length < 2)
+                this.flippedCards.push(card);
+            if(this.flippedCards.length === 2)    
+                this._match(card);
+        },
+
+        _match(card){
+
+            this.turns++;
+
+            if(this.flippedCards[0].name === this.flippedCards[1].name){
+                setTimeout(() => {
+                    this.flippedCards.forEach(card => card.isMatched = true);
+                    this.flippedCards = [];
+                    this.matches++;
+
+                    if(this.memorygame.every(card => card.isMatched === true)){
+                        clearInterval(this.interval);
+                        this.finish = true;
+                    }
+
+                }, 400);
+            }
+            else{
+                setTimeout(() => {
+                    this.flippedCards.forEach((card) => {card.isFlipped = false});
+                    this.flippedCards = [];
+                }, 800);
+            }
+
+        },
+
+        _startGame(){
+            this._tick();
+            this.interval = setInterval(this._tick,1000);
+            this.start = true;
+        },
+
+        _tick(){
+            if(this.totalTime.seconds !== 59){
+                this.totalTime.seconds++;
+                return
+            }
+
+            this.totalTime.minutes++;
+            this.totalTime.seconds = 0;
+        },
+    },
+
+    computed:{
+        sec(){
+            if(this.totalTime.seconds < 10){
+                return '0'+this.totalTime.seconds;
+            }
+            return this.totalTime.seconds;
+        },
+        min(){
+            if(this.totalTime.minutes < 10){
+                return '0'+this.totalTime.minutes;
+            }
+            return this.totalTime.minutes;
+        }
+    }
+});
+</script>
+</html>
